@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    container_name: standing_web
+    ports:
+      - "8000:8000"
+    environment:
+        - QingdaoUOJ_URL=${QingdaoUOJ_URL}
+        - QingdaoUOJ_ACCOUNT=${QingdaoUOJ_ACCOUNT}
+        - QingdaoUOJ_PASSWORD=${QingdaoUOJ_PASSWORD}
+        - TZ=Asia/Taipei
+    restart: unless-stopped

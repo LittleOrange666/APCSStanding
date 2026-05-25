@@ -1,0 +1,6 @@
+aiohttp
+requests
+fastapi
+tqdm
+uvicorn
+jinja2

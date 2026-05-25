@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standings</title>
+    <!-- Use Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --full: #22c55e;
+            --partial: #eab308;
+            --zero: #475569;
+        }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        select {
+            appearance: none;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.75rem 3rem 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            outline: none;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            /* custom arrow */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat, repeat;
+            background-position: right .7em top 50%, 0 0;
+            background-size: .65em auto, 100%;
+        }
+        select:hover, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .table-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+        th, td {
+            padding: 1.25rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            user-select: none;
+            transition: color 0.2s, background 0.2s;
+            position: sticky;
+            top: 0;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+        th:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        th.sort-active {
+            color: var(--accent-hover);
+        }
+        tbody tr {
+            transition: background 0.2s ease;
+        }
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .full-score { color: var(--full); font-weight: 600; }
+        .partial-score { color: var(--partial); font-weight: 600; }
+        .zero-score { color: var(--zero); opacity: 0.5; }
+        .handle-cell { font-weight: 600; color: #e2e8f0; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 4rem 0;
+            color: var(--accent);
+            animation: fadeIn 0.3s ease;
+        }
+        .loading-spinner.visible {
+            display: flex;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Contest Standings</h1>
+        <div class="controls">
+            <select id="contest-select">
+                <option value="">Select a contest...</option>
+            </select>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading-spinner">
+            <div class="spinner"></div>
+            <p style="font-weight: 600; font-size: 1.1rem; margin: 0; color: var(--text);">Fetching data...</p>
+        </div>
+
+        <div class="table-container" id="table-container">
+            <table id="standings-table">
+                <thead>
+                    <tr id="table-head"></tr>
+                </thead>
+                <tbody id="table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+        let currentSort = 'total';
+        let sortDesc = true;
+
+        async function fetchContests() {
+            try {
+                const res = await fetch('/contests');
+                const data = await res.json();
+                const select = document.getElementById('contest-select');
+                data.contests.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c;
+                    option.textContent = c;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error("Failed to fetch contests", err);
+            }
+        }
+
+        async function fetchStandings(contestName) {
+            const tableContainer = document.getElementById('table-container');
+            const loading = document.getElementById('loading');
+
+            if (!contestName) {
+                tableContainer.classList.remove('visible');
+                loading.classList.remove('visible');
+                return;
+            }
+            
+            tableContainer.classList.remove('visible');
+            loading.classList.add('visible');
+            
+            try {
+                const res = await fetch(`/contest/${contestName}`);
+                if (!res.ok) throw new Error("Fetch failed");
+                currentData = await res.json();
+                currentSort = 'total';
+                sortDesc = true;
+                renderTable();
+                
+                loading.classList.remove('visible');
+                setTimeout(() => {
+                    tableContainer.classList.add('visible');
+                }, 50);
+            } catch (err) {
+                loading.classList.remove('visible');
+                console.error("Failed to fetch standings", err);
+            }
+        }
+
+        function handleSort(key) {
+            if (currentSort === key) {
+                sortDesc = !sortDesc;
+            } else {
+                currentSort = key;
+                sortDesc = true;
+                if (key === 'handle') sortDesc = false;
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            if (!currentData) return;
+            const thead = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+            
+            const cols = ['handle', 'total', ...currentData.categories, ...currentData.problems];
+            
+            thead.innerHTML = '';
+            cols.forEach(col => {
+                const th = document.createElement('th');
+                let label = col;
+                if (col === 'handle') label = 'Handle';
+                else if (col === 'total') label = 'Total';
+                
+                let headerText = label;
+                if (col !== 'handle') {
+                   const maxScore = currentData.max_score[col] || 0;
+                   headerText += ` (${maxScore})`;
+                }
+                
+                th.textContent = headerText;
+                if (currentSort === col) {
+                    th.classList.add('sort-active');
+                    th.textContent += sortDesc ? ' ▼' : ' ▲';
+                }
+                th.style.cursor = 'pointer';
+                th.onclick = () => handleSort(col);
+                thead.appendChild(th);
+            });
+            
+            const entries = Object.entries(currentData.ranking).map(([handle, scores]) => ({
+                handle,
+                ...scores
+            }));
+            
+            entries.sort((a, b) => {
+                let valA = a[currentSort];
+                let valB = b[currentSort];
+                if (valA === undefined) valA = 0;
+                if (valB === undefined) valB = 0;
+                
+                if (currentSort === 'handle') {
+                    return sortDesc ? b.handle.localeCompare(a.handle) : a.handle.localeCompare(b.handle);
+                } else {
+                    return sortDesc ? valB - valA : valA - valB;
+                }
+            });
+            
+            tbody.innerHTML = '';
+            entries.forEach(row => {
+                const tr = document.createElement('tr');
+                cols.forEach(col => {
+                    const td = document.createElement('td');
+                    if (col === 'handle') {
+                        td.textContent = row.handle;
+                        td.className = 'handle-cell';
+                    } else {
+                        const score = row[col] || 0;
+                        td.textContent = score;
+                        
+                        const max = currentData.max_score[col] || 0;
+                        if (score > 0 && score >= max) td.classList.add('full-score');
+                        else if (score > 0) td.classList.add('partial-score');
+                        else td.classList.add('zero-score');
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('contest-select').addEventListener('change', (e) => {
+            fetchStandings(e.target.value);
+        });
+
+        // Init
+        fetchContests();
+    </script>
+</body>
+</html>
