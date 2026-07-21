@@ -123,6 +123,27 @@
         .zero-score { color: var(--zero); opacity: 0.5; }
         .handle-cell { font-weight: 600; color: #e2e8f0; }
 
+        /* Sticky Columns */
+        th.sticky-col {
+            position: sticky;
+            z-index: 20;
+            background: rgba(30, 41, 59, 1) !important;
+        }
+        td.sticky-col {
+            position: sticky;
+            z-index: 5;
+            background: rgba(30, 41, 59, 1);
+            transition: background 0.2s ease;
+        }
+        tbody tr:hover td.sticky-col {
+            background: rgba(42, 59, 82, 1);
+        }
+        .sticky-shadow {
+            box-shadow: 6px 0 8px -4px rgba(0,0,0,0.4);
+            /* Ensure shadow draws over non-sticky cells */
+            clip-path: inset(0 -15px 0 0);
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -213,6 +234,12 @@
                     option.textContent = c;
                     select.appendChild(option);
                 });
+                
+                const hash = window.location.hash.substring(1);
+                if (hash && data.contests.includes(hash)) {
+                    select.value = hash;
+                    fetchStandings(hash);
+                }
             } catch (err) {
                 console.error("Failed to fetch contests", err);
             }
@@ -265,28 +292,37 @@
             const thead = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
             
-            const cols = ['handle', 'total', ...currentData.categories, ...currentData.problems];
+            const cols = ['rank', 'handle', 'total', ...currentData.categories, ...currentData.problems];
             
             thead.innerHTML = '';
             cols.forEach(col => {
                 const th = document.createElement('th');
                 let label = col;
-                if (col === 'handle') label = 'Handle';
+                if (col === 'rank') label = '#';
+                else if (col === 'handle') label = 'Handle';
                 else if (col === 'total') label = 'Total';
                 
                 let headerText = label;
-                if (col !== 'handle') {
+                if (col !== 'rank' && col !== 'handle') {
                    const maxScore = currentData.max_score[col] || 0;
                    headerText += ` (${maxScore})`;
                 }
                 
                 th.textContent = headerText;
-                if (currentSort === col) {
-                    th.classList.add('sort-active');
-                    th.textContent += sortDesc ? ' ▼' : ' ▲';
+                if (col !== 'rank') {
+                    if (currentSort === col) {
+                        th.classList.add('sort-active');
+                        th.textContent += sortDesc ? ' ▼' : ' ▲';
+                    }
+                    th.style.cursor = 'pointer';
+                    th.onclick = () => handleSort(col);
                 }
-                th.style.cursor = 'pointer';
-                th.onclick = () => handleSort(col);
+                
+                if (['rank', 'handle', 'total'].includes(col)) {
+                    th.classList.add('sticky-col');
+                    if (col === 'total') th.classList.add('sticky-shadow');
+                }
+                
                 thead.appendChild(th);
             });
             
@@ -309,11 +345,15 @@
             });
             
             tbody.innerHTML = '';
-            entries.forEach(row => {
+            entries.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 cols.forEach(col => {
                     const td = document.createElement('td');
-                    if (col === 'handle') {
+                    if (col === 'rank') {
+                        td.textContent = index + 1;
+                        td.style.fontWeight = '800';
+                        td.style.color = 'var(--text-muted)';
+                    } else if (col === 'handle') {
                         td.textContent = row.handle;
                         td.className = 'handle-cell';
                     } else {
@@ -325,14 +365,73 @@
                         else if (score > 0) td.classList.add('partial-score');
                         else td.classList.add('zero-score');
                     }
+                    
+                    if (['rank', 'handle', 'total'].includes(col)) {
+                        td.classList.add('sticky-col');
+                        if (col === 'total') td.classList.add('sticky-shadow');
+                    }
+                    
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
+            
+            // Calculate sticky column offsets dynamically after DOM is rendered
+            requestAnimationFrame(() => {
+                const theadTr = document.getElementById('table-head');
+                const tbodyTrs = document.querySelectorAll('#table-body tr');
+                if (!tbodyTrs.length || !theadTr.children.length) return;
+                
+                let currentLeft = 0;
+                // Only loop over the first 3 columns (rank, handle, total)
+                for (let i = 0; i < 3; i++) {
+                    const th = theadTr.children[i];
+                    if (!th) break;
+                    
+                    th.style.left = currentLeft + 'px';
+                    tbodyTrs.forEach(tr => {
+                        const td = tr.children[i];
+                        if (td) td.style.left = currentLeft + 'px';
+                    });
+                    
+                    currentLeft += th.offsetWidth;
+                }
+            });
         }
 
         document.getElementById('contest-select').addEventListener('change', (e) => {
-            fetchStandings(e.target.value);
+            const contestName = e.target.value;
+            if (contestName) {
+                window.location.hash = contestName;
+            } else {
+                window.history.pushState("", document.title, window.location.pathname + window.location.search);
+            }
+            fetchStandings(contestName);
+        });
+
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.substring(1);
+            const select = document.getElementById('contest-select');
+            
+            let valid = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === hash) {
+                    valid = true;
+                    break;
+                }
+            }
+            
+            if (valid) {
+                if (select.value !== hash) {
+                    select.value = hash;
+                    fetchStandings(hash);
+                }
+            } else if (!hash) {
+                if (select.value !== "") {
+                    select.value = "";
+                    fetchStandings("");
+                }
+            }
         });
 
         // Init

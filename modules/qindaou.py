@@ -5,6 +5,7 @@ import string
 import asyncio
 
 import aiohttp
+from loguru import logger
 from tqdm.asyncio import trange
 
 
@@ -99,6 +100,7 @@ class QingdaoUOJ:
     async def get_data(self, path: str, skip_check=False):
         if not path.startswith("/") and len(path) > 0:
             path = "/" + path
+        logger.debug(f"get {path}")
         async with aiohttp.ClientSession() as session:
             async with session.get(self.url + path, headers={"Cookie": self.get_cookie()}) as res:
                 if not res.ok:

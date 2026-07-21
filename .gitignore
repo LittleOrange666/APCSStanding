@@ -1,2 +1,4 @@
 .env
 .idea/
+out/
+qindaou_info.json
